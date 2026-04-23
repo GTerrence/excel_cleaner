@@ -1,0 +1,26 @@
+local/*
+
+# --- OS Specific ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+.Spotlight-V100
+.Trashes
+
+# --- Byte-compiled / optimized / DLLs ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Streamlit ---
+# Local Streamlit config and credentials
+.streamlit/config.toml
+.streamlit/secrets.toml
+
+# --- IDEs ---
+.vscode/
+.idea/
+
+# --- Environment Variables ---
+.env
