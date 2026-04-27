@@ -1,7 +1,9 @@
 import io
+from typing import Any
+
 import msoffcrypto
 import pandas as pd
-from typing import Any
+
 
 def load_password_excel(uploaded_file: Any, password: str) -> pd.DataFrame:
     # Create a buffer for the decrypted file
@@ -14,3 +16,36 @@ def load_password_excel(uploaded_file: Any, password: str) -> pd.DataFrame:
 
     df = pd.read_excel(decrypted_buffer)
     return df
+
+
+def remove_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
+    return df.dropna(how='all')
+
+
+def remove_empty_cols(df: pd.DataFrame) -> pd.DataFrame:
+    return df.dropna(axis=1, how='all')
+
+
+def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
+    # NOTE: Find index for row with value "No"
+    header_idx = df[df.iloc[:, 1] == 'No'].index[0]
+    clean_df = df.iloc[header_idx:].copy()
+
+    clean_df = remove_empty_rows(clean_df)
+    clean_df = remove_empty_cols(clean_df)
+
+    # NOTE: Rename column 'e-Statement' to 'No.'
+    clean_df.loc[2:, 'Unnamed: 1'] = clean_df.loc[2:, 'e-Statement'].astype(str)
+    clean_df.drop(columns=['e-Statement'], inplace=True)
+    clean_df.rename(columns={'Unnamed: 1': 'No.'}, inplace=True)
+
+    # NOTE: Merge multiple rows that should be in one row.
+    clean_df['No.'] = clean_df['No.'].ffill()
+
+    def smart_append(series: pd.Series) -> str:
+        # Filter out empty/NaN values, convert to string, and join with a space
+        valid_items = [str(item).strip() for item in series if pd.notna(item) and str(item).strip() != ""]
+        return " ".join(valid_items).replace("\n", " ")
+
+    clean_df = clean_df.groupby('No.', as_index=False).agg(smart_append)
+    return clean_df
