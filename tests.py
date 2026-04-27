@@ -1,0 +1,16 @@
+import os
+from pprint import pprint
+
+from dotenv import load_dotenv
+
+from utils import clean_mandiri, load_password_excel
+
+load_dotenv()
+
+filename = 'local/sample_mandiri.xlsx'
+password = os.getenv('TEST_PASSWORD', '')
+
+with open(filename, 'rb') as f:
+    df = load_password_excel(f, password)
+    clean_df = clean_mandiri(df)
+    pprint(clean_df.head(n=20).to_dict(orient='records'))
