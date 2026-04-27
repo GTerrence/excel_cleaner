@@ -1,0 +1,51 @@
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C4",  # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "PD",  # pandas-vet
+]
+ignore = [
+    "PD901",  # 'df' is a bad variable name
+    "PD002",  # 'inplace=True' should be avoided (allowed for convenience in this mini project)
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["excel_cleaner"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+
+# Ignore missing imports for third-party libraries without stubs or for simplicity
+[[tool.mypy.overrides]]
+module = [
+    "pandas.*",
+    "streamlit.*",
+    "openpyxl.*",
+    "msoffcrypto.*"
+]
+ignore_missing_imports = true
