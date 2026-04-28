@@ -38,14 +38,17 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     # NOTE: Rename column 'e-Statement' to 'No.'
     clean_df.loc[2:, 'Unnamed: 1'] = clean_df.loc[2:, 'e-Statement'].astype(str)
     clean_df.drop(columns=['e-Statement'], inplace=True)
-    clean_df.rename(columns={
-        'Unnamed: 1': 'No.',
-        'Unnamed: 4': 'Tanggal',
-        'Unnamed: 7': 'Description',
-        'Unnamed: 15': 'Kredit',
-        'Unnamed: 18': 'Debit',
-        'Unnamed: 21': 'Saldo',
-    }, inplace=True)
+    clean_df.rename(
+        columns={
+            'Unnamed: 1': 'No.',
+            'Unnamed: 4': 'Tanggal',
+            'Unnamed: 7': 'Description',
+            'Unnamed: 15': 'Kredit',
+            'Unnamed: 18': 'Debit',
+            'Unnamed: 21': 'Saldo',
+        },
+        inplace=True,
+    )
 
     # NOTE: Merge multiple rows that should be in one row.
     clean_df['No.'] = clean_df['No.'].ffill()
