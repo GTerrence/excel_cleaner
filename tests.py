@@ -13,4 +13,5 @@ password = os.getenv('TEST_PASSWORD', '')
 with open(filename, 'rb') as f:
     df = load_password_excel(f, password)
     clean_df = clean_mandiri(df)
-    pprint(clean_df.head(n=20).to_dict(orient='records'))
+    pprint(clean_df.head().to_dict(orient='records'))
+    # print(clean_df['Unnamed: 19'].unique())
