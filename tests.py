@@ -39,5 +39,4 @@ class TestValidators(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # run_manual_test()
     unittest.main()

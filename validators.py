@@ -11,7 +11,7 @@ class ValidationRule(ABC):
         """
         Evaluate the DataFrame and return a boolean Series indicating which rows match the rule.
         """
-        pass
+        raise NotImplementedError
 
 
 class ColumnFilledRule(ValidationRule):
