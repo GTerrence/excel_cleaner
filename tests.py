@@ -7,7 +7,7 @@ from utils import clean_mandiri, load_password_excel
 
 load_dotenv()
 
-filename = 'local/sample_mandiri.xlsx'
+filename = 'local/sample_mandiri2.xlsx'
 password = os.getenv('TEST_PASSWORD', '')
 
 with open(filename, 'rb') as f:

@@ -29,7 +29,8 @@ def remove_empty_cols(df: pd.DataFrame) -> pd.DataFrame:
 def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     # NOTE: Find index for row with value "No"
     header_idx = df[df.iloc[:, 1] == 'No'].index[0]
-    clean_df = df.iloc[header_idx:].copy()
+    footer_idx = df[df.iloc[:, df.columns.get_loc("Unnamed: 19")] == 'Mandiri Call 14000'].index[0]
+    clean_df = df.iloc[header_idx:footer_idx].copy()
 
     clean_df = remove_empty_rows(clean_df)
     clean_df = remove_empty_cols(clean_df)
@@ -37,7 +38,17 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     # NOTE: Rename column 'e-Statement' to 'No.'
     clean_df.loc[2:, 'Unnamed: 1'] = clean_df.loc[2:, 'e-Statement'].astype(str)
     clean_df.drop(columns=['e-Statement'], inplace=True)
-    clean_df.rename(columns={'Unnamed: 1': 'No.'}, inplace=True)
+    clean_df.rename(
+        columns={
+            'Unnamed: 1': 'No.',
+            'Unnamed: 4': 'Tanggal',
+            'Unnamed: 7': 'Description',
+            'Unnamed: 15': 'Kredit',
+            'Unnamed: 18': 'Debit',
+            'Unnamed: 21': 'Saldo',
+        },
+        inplace=True,
+    )
 
     # NOTE: Merge multiple rows that should be in one row.
     clean_df['No.'] = clean_df['No.'].ffill()
