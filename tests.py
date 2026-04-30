@@ -17,20 +17,26 @@ class TestValidators(unittest.TestCase):
         self.assertEqual(mask.tolist(), [True, False, False, True])
 
     def test_column_contains_rule(self):
+        # Change data locally to test substring match
+        df_test = self.df.copy()
+        df_test['C'] = ['green apple', 'banana', 'cherry', 'fresh date']
+        
         rule = ColumnContainsRule('C', ['apple', 'date'])
-        mask = rule.apply(self.df)
+        mask = rule.apply(df_test)
         self.assertEqual(mask.tolist(), [True, False, False, True])
 
     def test_mark_rows_combined(self):
+        df_test = self.df.copy()
+        df_test['C'] = ['green apple', 'yellow banana', 'cherry', 'fresh date']
         rules = [
             ColumnFilledRule('A'),
             ColumnContainsRule('C', ['banana'])
         ]
         # 'foo' matches filled
-        # '' matches nothing but 'banana' matches C
+        # '' matches nothing but 'yellow banana' matches C
         # None matches nothing
         # 'bar' matches filled
-        mask = mark_rows(self.df, rules)
+        mask = mark_rows(df_test, rules)
         self.assertEqual(mask.tolist(), [1, 1, 0, 1])
 
 if __name__ == '__main__':
