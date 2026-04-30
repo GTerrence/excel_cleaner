@@ -1,16 +1,38 @@
-import os
-from pprint import pprint
+import unittest
+import pandas as pd
+from validators import ColumnFilledRule, ColumnContainsRule, mark_rows
 
-from dotenv import load_dotenv
+class TestValidators(unittest.TestCase):
+    def setUp(self):
+        self.df = pd.DataFrame({
+            'A': ['foo', '', None, 'bar'],
+            'B': [1, 2, 3, 4],
+            'C': ['apple', 'banana', 'cherry', 'date']
+        })
 
-from utils import clean_mandiri, load_password_excel
+    def test_column_filled_rule(self):
+        rule = ColumnFilledRule('A')
+        mask = rule.apply(self.df)
+        # Expected: True for 'foo' and 'bar', False for '' and None
+        self.assertEqual(mask.tolist(), [True, False, False, True])
 
-load_dotenv()
+    def test_column_contains_rule(self):
+        rule = ColumnContainsRule('C', ['apple', 'date'])
+        mask = rule.apply(self.df)
+        self.assertEqual(mask.tolist(), [True, False, False, True])
 
-filename = 'local/sample_mandiri2.xlsx'
-password = os.getenv('TEST_PASSWORD', '')
+    def test_mark_rows_combined(self):
+        rules = [
+            ColumnFilledRule('A'),
+            ColumnContainsRule('C', ['banana'])
+        ]
+        # 'foo' matches filled
+        # '' matches nothing but 'banana' matches C
+        # None matches nothing
+        # 'bar' matches filled
+        mask = mark_rows(self.df, rules)
+        self.assertEqual(mask.tolist(), [1, 1, 0, 1])
 
-with open(filename, 'rb') as f:
-    df = load_password_excel(f, password)
-    clean_df = clean_mandiri(df)
-    pprint(clean_df.head(n=20).to_dict(orient='records'))
+if __name__ == '__main__':
+    # run_manual_test()
+    unittest.main()
