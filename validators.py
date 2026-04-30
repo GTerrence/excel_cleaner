@@ -1,7 +1,9 @@
-from abc import ABC, abstractmethod
-from typing import List, Any
-import pandas as pd
 import re
+from abc import ABC, abstractmethod
+from typing import Any
+
+import pandas as pd
+
 
 class ValidationRule(ABC):
     @abstractmethod
@@ -10,6 +12,7 @@ class ValidationRule(ABC):
         Evaluate the DataFrame and return a boolean Series indicating which rows match the rule.
         """
         pass
+
 
 class ColumnFilledRule(ValidationRule):
     def __init__(self, column_name: str):
@@ -27,8 +30,9 @@ class ColumnFilledRule(ValidationRule):
 
         return mask
 
+
 class ColumnContainsRule(ValidationRule):
-    def __init__(self, column_name: str, target_values: List[Any]):
+    def __init__(self, column_name: str, target_values: list[Any]):
         self.column_name = column_name
         self.target_values = target_values
 
@@ -43,7 +47,8 @@ class ColumnContainsRule(ValidationRule):
         col_str = df[self.column_name].astype(str)
         return col_str.str.contains(pattern, case=False, regex=True, na=False)
 
-def mark_rows(df: pd.DataFrame, rules: List[ValidationRule]) -> pd.Series:
+
+def mark_rows(df: pd.DataFrame, rules: list[ValidationRule]) -> pd.Series:
     """
     Marks rows in the DataFrame that match any of the provided ValidationRules.
 

@@ -60,4 +60,3 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
 
     clean_df = clean_df.groupby('No.', as_index=False).agg(smart_append)
     return clean_df
-
