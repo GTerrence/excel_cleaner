@@ -1,8 +1,11 @@
 import unittest
 
 import pandas as pd
+import re
 
 from validators import ColumnContainsRule, ColumnFilledRule, mark_rows
+from utils import remove_rows, style_rows_red
+
 
 
 class TestValidators(unittest.TestCase):
@@ -36,6 +39,40 @@ class TestValidators(unittest.TestCase):
         # 'bar' matches filled
         mask = mark_rows(df_test, rules)
         self.assertEqual(mask.tolist(), [1, 1, 0, 1])
+
+
+class TestUtils(unittest.TestCase):
+    def setUp(self):
+        self.df = pd.DataFrame(
+            {'A': ['foo', 'bar', 'baz'], 'B': [1, 2, 3]}
+        )
+        self.mask = pd.Series([True, False, True])
+
+    def test_remove_rows(self):
+        result_df = remove_rows(self.df, self.mask)
+        # Should keep only the middle row where mask is False
+        self.assertEqual(len(result_df), 1)
+        self.assertEqual(result_df.iloc[0]['A'], 'bar')
+        self.assertEqual(result_df.iloc[0]['B'], 2)
+
+    def test_style_rows_red(self):
+        styler = style_rows_red(self.df, self.mask)
+
+        self.assertIsInstance(styler, pd.io.formats.style.Styler)
+
+        # Verify the style by checking the HTML representation
+        html = styler.to_html()
+
+        # Extract the CSS block that defines the red background
+        match = re.search(r'(.*?)\{\s*background-color:\s*red;\s*\}', html)
+        self.assertIsNotNone(match)
+
+        css_selectors = match.group(1)
+        # Check that rows 0 and 2 are targeted by the red style
+        self.assertIn('row0', css_selectors)
+        self.assertIn('row2', css_selectors)
+        # Ensure row 1 is NOT styled red
+        self.assertNotIn('row1', css_selectors)
 
 
 if __name__ == '__main__':
