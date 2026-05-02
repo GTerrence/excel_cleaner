@@ -1,15 +1,13 @@
-import io
-import zipfile
 from datetime import datetime
 
 import msoffcrypto
 import pandas as pd
 import streamlit as st
 
-from utils import clean_mandiri, load_password_excel, remove_rows, style_rows_red, create_zip
-from validators import mark_rows, ColumnFilledRule, ColumnContainsRule
+from utils import clean_mandiri, create_zip, load_password_excel, remove_rows, style_rows_red
+from validators import ColumnFilledRule, ValidationRule, mark_rows
 
-MANDIRI_RULES = [
+MANDIRI_RULES: list[ValidationRule] = [
     ColumnFilledRule(column_name='Debit'),
 ]
 

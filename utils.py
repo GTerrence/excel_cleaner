@@ -67,6 +67,7 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
 
     return clean_df
 
+
 def remove_rows(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
     """
     Remove rows from the DataFrame where the boolean mask is True.
@@ -87,9 +88,8 @@ def style_rows_red(df: pd.DataFrame, mask: pd.Series) -> 'pd.io.formats.style.St
 
     return df.style.apply(highlight_rows, axis=None)
 
-def create_zip(
-    cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler', date_str: str
-) -> bytes:
+
+def create_zip(cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler', date_str: str) -> bytes:
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
