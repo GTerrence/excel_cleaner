@@ -74,9 +74,10 @@ def style_rows_red(df: pd.DataFrame, mask: pd.Series) -> 'pd.io.formats.style.St
     Style the rows of a DataFrame to red based on a boolean mask.
     The mask should be True for rows that need to be styled.
     """
+
     def highlight_rows(x: pd.DataFrame) -> pd.DataFrame:
         df_style = pd.DataFrame('', index=x.index, columns=x.columns)
         df_style.loc[mask, :] = 'background-color: red'
         return df_style
-    
+
     return df.style.apply(highlight_rows, axis=None)
