@@ -1,4 +1,5 @@
 import io
+import zipfile
 from typing import Any
 
 import msoffcrypto
@@ -59,11 +60,11 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
         return " ".join(valid_items).replace("\n", " ")
 
     clean_df = clean_df.groupby('No.', as_index=False).agg(smart_append)
-    
+
     # Sort numerically by "No." column
     clean_df['sort_key'] = pd.to_numeric(clean_df['No.'], errors='coerce')
     clean_df = clean_df.sort_values('sort_key').drop(columns=['sort_key']).reset_index(drop=True)
-    
+
     return clean_df
 
 def remove_rows(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
@@ -85,3 +86,21 @@ def style_rows_red(df: pd.DataFrame, mask: pd.Series) -> 'pd.io.formats.style.St
         return df_style
 
     return df.style.apply(highlight_rows, axis=None)
+
+def create_zip(
+    cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler', date_str: str
+) -> bytes:
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        # Save cleaned file
+        cleaned_buffer = io.BytesIO()
+        cleaned_df.to_excel(cleaned_buffer, index=False, engine='openpyxl')
+        zip_file.writestr(f"Mandiri_{date_str}_cleaned.xlsx", cleaned_buffer.getvalue())
+
+        # Save validation file
+        validation_buffer = io.BytesIO()
+        styled_styler.to_excel(validation_buffer, index=False, engine='openpyxl')
+        zip_file.writestr(f"Mandiri_{date_str}_validation.xlsx", validation_buffer.getvalue())
+
+    return zip_buffer.getvalue()

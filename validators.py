@@ -57,10 +57,10 @@ def mark_rows(df: pd.DataFrame, rules: list[ValidationRule]) -> pd.Series:
         rules: A list of ValidationRule instances.
 
     Returns:
-        A pandas Series of integers (1 for marked, 0 for unmarked) with the same index as the input DataFrame.
+        A pandas Series of boolean (True for marked, False for unmarked) with the same index as the input DataFrame.
     """
     if df.empty or not rules:
-        return pd.Series(0, index=df.index)
+        return pd.Series(False, index=df.index)
 
     # Initialize a mask of all False
     combined_mask = pd.Series(False, index=df.index)
