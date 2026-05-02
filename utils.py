@@ -59,8 +59,12 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
         return " ".join(valid_items).replace("\n", " ")
 
     clean_df = clean_df.groupby('No.', as_index=False).agg(smart_append)
+    
+    # Sort numerically by "No." column
+    clean_df['sort_key'] = pd.to_numeric(clean_df['No.'], errors='coerce')
+    clean_df = clean_df.sort_values('sort_key').drop(columns=['sort_key']).reset_index(drop=True)
+    
     return clean_df
-
 
 def remove_rows(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
     """

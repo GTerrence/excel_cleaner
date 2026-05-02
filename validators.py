@@ -70,4 +70,4 @@ def mark_rows(df: pd.DataFrame, rules: list[ValidationRule]) -> pd.Series:
         combined_mask = combined_mask | rule.apply(df)
 
     # Convert boolean mask to 1s and 0s
-    return combined_mask.astype(int)
+    return combined_mask.astype(bool)
