@@ -27,6 +27,17 @@ Excel Cleaner is a Streamlit-based web application designed to automate the clea
    ```bash
    pip install -r requirements.txt
    ```
+4. Setup validation rules in `.streamlit/secrets.toml`:
+   ```toml
+   [VALIDATION_RULE]
+    <BANK TYPE> = [
+        { class = "<ClassName>", params = { <params> } },
+    ]
+   ```
+   where:
+   - `<BANK TYPE>` is the type of bank, e.g. `MANDIRI`, `BNI`, `BCA`.
+   - `<ClassName>` is the name of the validation rule class, e.g. `ColumnFilledRule`, `ColumnContainsRule`.
+   - `<params>` is a dictionary of parameters for the validation rule class.
 
 ## Usage
 
