@@ -3,8 +3,9 @@ import unittest
 
 import pandas as pd
 
-from utils import remove_rows, style_rows_red
-from validators import ColumnContainsRule, ColumnFilledRule, mark_rows
+
+from excel_cleaner.utils import remove_rows, style_rows_red
+from excel_cleaner.validators import ColumnContainsRule, ColumnFilledRule, mark_rows
 
 
 class TestValidators(unittest.TestCase):
