@@ -4,12 +4,11 @@ import msoffcrypto
 import pandas as pd
 import streamlit as st
 
-from utils import clean_mandiri, create_zip, load_password_excel, remove_rows, style_rows_red
-from validators import ColumnFilledRule, ValidationRule, mark_rows
+from excel_cleaner.constants import BankType
+from excel_cleaner.utils import clean_mandiri, create_zip, load_password_excel, remove_rows, style_rows_red
+from excel_cleaner.validators import ValidationRule, load_rules_config, mark_rows
 
-MANDIRI_RULES: list[ValidationRule] = [
-    ColumnFilledRule(column_name='Debit'),
-]
+RULES: dict[BankType, list[ValidationRule]] = load_rules_config()
 
 st.set_page_config(page_title="Excel Cleaner", page_icon="📝")
 
@@ -17,6 +16,7 @@ st.set_page_config(page_title="Excel Cleaner", page_icon="📝")
 def main() -> None:
     st.title("Excel Cleaner")
 
+    bank_type = st.selectbox("Bank Type", BankType)
     uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx", "xls"])
 
     if uploaded_file is not None:
@@ -52,7 +52,7 @@ def main() -> None:
                         clean_df.drop(columns=['Saldo'], inplace=True)
 
                     # Validation rules masking
-                    mask = mark_rows(clean_df, MANDIRI_RULES)
+                    mask = mark_rows(clean_df, RULES[bank_type])
 
                     # Apply styles and row removal
                     cleaned_df = remove_rows(clean_df, mask)
@@ -67,7 +67,7 @@ def main() -> None:
                     st.download_button(
                         label="Download Reports (ZIP)",
                         data=zip_data,
-                        file_name=f"Mandiri_Reports_{date_str}.zip",
+                        file_name=f"{bank_type}_Reports_{date_str}.zip",
                         mime="application/zip",
                     )
 

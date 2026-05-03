@@ -3,6 +3,9 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import pandas as pd
+import streamlit as st
+
+from .constants import BankType
 
 
 class ValidationRule(ABC):
@@ -71,3 +74,24 @@ def mark_rows(df: pd.DataFrame, rules: list[ValidationRule]) -> pd.Series:
 
     # Convert boolean mask to 1s and 0s
     return combined_mask.astype(bool)
+
+
+VALIDATION_RULES_CLASS_REGISTRY = {
+    "ColumnFilledRule": ColumnFilledRule,
+    "ColumnContainsRule": ColumnContainsRule,
+}
+
+
+def load_rules_config() -> dict[BankType, list[ValidationRule]]:
+    validation_rule_config = st.secrets.get('VALIDATION_RULE', {})
+
+    validation_rules: dict[BankType, list[ValidationRule]] = {}
+    for bank_type, rules in validation_rule_config.items():
+        bank_type = BankType(bank_type)
+        rules_list = []
+        for rule in rules:
+            rule_class = VALIDATION_RULES_CLASS_REGISTRY[rule["class"]]
+            rules_list.append(rule_class(**rule["params"]))
+        validation_rules[bank_type] = rules_list
+
+    return validation_rules
