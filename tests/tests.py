@@ -3,7 +3,6 @@ import unittest
 
 import pandas as pd
 
-
 from excel_cleaner.utils import remove_rows, style_rows_red
 from excel_cleaner.validators import ColumnContainsRule, ColumnFilledRule, mark_rows
 

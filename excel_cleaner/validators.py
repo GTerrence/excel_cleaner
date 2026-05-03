@@ -81,6 +81,7 @@ VALIDATION_RULES_CLASS_REGISTRY = {
     "ColumnContainsRule": ColumnContainsRule,
 }
 
+
 def load_rules_config() -> dict[BankType, list[ValidationRule]]:
     validation_rule_config = st.secrets.get('VALIDATION_RULE', {})
 
@@ -89,7 +90,7 @@ def load_rules_config() -> dict[BankType, list[ValidationRule]]:
         bank_type = BankType(bank_type)
         rules_list = []
         for rule in rules:
-            rule_class = VALIDATION_RULES_CLASS_REGISTRY.get(rule["class"])
+            rule_class = VALIDATION_RULES_CLASS_REGISTRY[rule["class"]]
             rules_list.append(rule_class(**rule["params"]))
         validation_rules[bank_type] = rules_list
 
