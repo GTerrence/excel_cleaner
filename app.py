@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from excel_cleaner.constants import BankType
-from excel_cleaner.utils import clean_mandiri, create_zip, load_password_excel, remove_rows, style_rows_red
+from excel_cleaner.utils import get_clean_df, create_zip, load_password_excel, remove_rows, style_rows_red
 from excel_cleaner.validators import ValidationRule, load_rules_config, mark_rows
 
 RULES: dict[BankType, list[ValidationRule]] = load_rules_config()
@@ -49,9 +49,7 @@ def main() -> None:
                         df = pd.read_excel(uploaded_file)
 
                     # Pre-processing
-                    clean_df = clean_mandiri(df)
-                    if 'Saldo' in clean_df.columns:
-                        clean_df.drop(columns=['Saldo'], inplace=True)
+                    clean_df = get_clean_df(df, bank_type)
 
                     # Validation rules masking
                     mask = mark_rows(clean_df, RULES[bank_type])
