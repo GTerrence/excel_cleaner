@@ -17,7 +17,7 @@ def main() -> None:
     st.title("Excel Cleaner")
 
     bank_type = st.selectbox("Bank Type", BankType)
-    uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx", "xls"])
+    uploaded_file = st.file_uploader("Upload Excel or CSV File", type=["xlsx", "xls", "csv"])
 
     if uploaded_file is not None:
         # Check if file is encrypted
@@ -41,7 +41,9 @@ def main() -> None:
         if st.button("Process File"):
             with st.spinner("Processing file..."):
                 try:
-                    if is_encrypted:
+                    if uploaded_file.type == 'text/csv':
+                        df = pd.read_csv(uploaded_file)
+                    elif is_encrypted:
                         df = load_password_excel(uploaded_file, password)
                     else:
                         df = pd.read_excel(uploaded_file)
