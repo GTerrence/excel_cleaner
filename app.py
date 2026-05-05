@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from excel_cleaner.constants import BankType
-from excel_cleaner.utils import get_clean_df, create_zip, load_password_excel, remove_rows, style_rows_red
+from excel_cleaner.utils import get_clean_df, create_zip, load_password_excel, remove_rows, style_rows_red, get_dataframe
 from excel_cleaner.validators import ValidationRule, load_rules_config, mark_rows
 
 RULES: dict[BankType, list[ValidationRule]] = load_rules_config()
@@ -41,12 +41,7 @@ def main() -> None:
         if st.button("Process File"):
             with st.spinner("Processing file..."):
                 try:
-                    if uploaded_file.type == 'text/csv':
-                        df = pd.read_csv(uploaded_file)
-                    elif is_encrypted:
-                        df = load_password_excel(uploaded_file, password)
-                    else:
-                        df = pd.read_excel(uploaded_file)
+                    df = get_dataframe(uploaded_file, bank_type)
 
                     # Pre-processing
                     clean_df = get_clean_df(df, bank_type)

@@ -18,7 +18,7 @@ class ValidationRule(ABC):
 
 
 class ColumnFilledRule(ValidationRule):
-    def __init__(self, column_name: str):
+    def __init__(self, column_name: str) -> None:
         self.column_name = column_name
 
     def apply(self, df: pd.DataFrame) -> pd.Series:
@@ -35,7 +35,7 @@ class ColumnFilledRule(ValidationRule):
 
 
 class ColumnContainsRule(ValidationRule):
-    def __init__(self, column_name: str, target_values: list[Any]):
+    def __init__(self, column_name: str, target_values: list[Any]) -> None:
         self.column_name = column_name
         self.target_values = target_values
 
@@ -49,6 +49,19 @@ class ColumnContainsRule(ValidationRule):
 
         col_str = df[self.column_name].astype(str)
         return col_str.str.contains(pattern, case=False, regex=True, na=False)
+
+class ColumnEqualsRule(ValidationRule):
+    def __init__(self, column_name: str, target_values: list[Any]) -> None:
+        self.column_name = column_name
+        self.target_values = target_values
+
+    def apply(self, df: pd.DataFrame) -> pd.Series:
+        if self.column_name not in df.columns:
+            return pd.Series(False, index=df.index)
+
+        str_targets = [str(t).lower() for t in self.target_values]
+        col_str = df[self.column_name].astype(str).str.lower()
+        return col_str.isin(str_targets)
 
 
 def mark_rows(df: pd.DataFrame, rules: list[ValidationRule]) -> pd.Series:
@@ -79,6 +92,7 @@ def mark_rows(df: pd.DataFrame, rules: list[ValidationRule]) -> pd.Series:
 VALIDATION_RULES_CLASS_REGISTRY = {
     "ColumnFilledRule": ColumnFilledRule,
     "ColumnContainsRule": ColumnContainsRule,
+    "ColumnEqualsRule": ColumnEqualsRule,
 }
 
 

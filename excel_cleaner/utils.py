@@ -5,6 +5,8 @@ from typing import Any
 import msoffcrypto
 import pandas as pd
 
+from .constants import BankType
+
 
 def load_password_excel(uploaded_file: Any, password: str) -> pd.DataFrame:
     # Create a buffer for the decrypted file
@@ -118,6 +120,22 @@ def clean_bca(df: pd.DataFrame) -> pd.DataFrame:
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Balance', 'Branch'], inplace=True)
     return clean_df
+
+def get_dataframe(file: Any, bank_type: BankType) -> pd.DataFrame:
+    match bank_type:
+        case BankType.BCA:
+            kwargs = {'skiprows': 4}
+        case _:
+            kwargs = {}
+
+    if file.type == 'text/csv':
+        df = pd.read_csv(file, **kwargs)
+    elif is_encrypted:
+        df = load_password_excel(file, password)
+    else:
+        df = pd.read_excel(file, **kwargs)
+
+    return df
 
 
 def get_clean_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
