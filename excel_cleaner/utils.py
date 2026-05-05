@@ -121,7 +121,8 @@ def clean_bca(df: pd.DataFrame) -> pd.DataFrame:
     clean_df.drop(columns=['Balance', 'Branch'], inplace=True)
     return clean_df
 
-def get_dataframe(file: Any, bank_type: BankType) -> pd.DataFrame:
+
+def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -> pd.DataFrame:
     match bank_type:
         case BankType.BCA:
             kwargs = {'skiprows': 4}
@@ -130,7 +131,7 @@ def get_dataframe(file: Any, bank_type: BankType) -> pd.DataFrame:
 
     if file.type == 'text/csv':
         df = pd.read_csv(file, **kwargs)
-    elif is_encrypted:
+    elif password:
         df = load_password_excel(file, password)
     else:
         df = pd.read_excel(file, **kwargs)

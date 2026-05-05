@@ -1,11 +1,16 @@
 from datetime import datetime
 
 import msoffcrypto
-import pandas as pd
 import streamlit as st
 
 from excel_cleaner.constants import BankType
-from excel_cleaner.utils import get_clean_df, create_zip, load_password_excel, remove_rows, style_rows_red, get_dataframe
+from excel_cleaner.utils import (
+    create_zip,
+    get_clean_df,
+    get_dataframe,
+    remove_rows,
+    style_rows_red,
+)
 from excel_cleaner.validators import ValidationRule, load_rules_config, mark_rows
 
 RULES: dict[BankType, list[ValidationRule]] = load_rules_config()
@@ -41,7 +46,7 @@ def main() -> None:
         if st.button("Process File"):
             with st.spinner("Processing file..."):
                 try:
-                    df = get_dataframe(uploaded_file, bank_type)
+                    df = get_dataframe(uploaded_file, bank_type, password)
 
                     # Pre-processing
                     clean_df = get_clean_df(df, bank_type)

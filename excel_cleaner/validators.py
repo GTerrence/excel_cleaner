@@ -50,6 +50,7 @@ class ColumnContainsRule(ValidationRule):
         col_str = df[self.column_name].astype(str)
         return col_str.str.contains(pattern, case=False, regex=True, na=False)
 
+
 class ColumnEqualsRule(ValidationRule):
     def __init__(self, column_name: str, target_values: list[Any]) -> None:
         self.column_name = column_name
