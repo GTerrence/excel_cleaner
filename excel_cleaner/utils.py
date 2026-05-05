@@ -50,19 +50,19 @@ def style_rows_red(df: pd.DataFrame, mask: pd.Series) -> 'pd.io.formats.style.St
     return df.style.apply(highlight_rows, axis=None)
 
 
-def create_zip(cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler', date_str: str) -> bytes:
+def create_zip(cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler', date_str: str, bank_type: BankType) -> bytes:
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         # Save cleaned file
         cleaned_buffer = io.BytesIO()
         cleaned_df.to_excel(cleaned_buffer, index=False, engine='openpyxl')
-        zip_file.writestr(f"Mandiri_{date_str}_cleaned.xlsx", cleaned_buffer.getvalue())
+        zip_file.writestr(f"{bank_type}_{date_str}_cleaned.xlsx", cleaned_buffer.getvalue())
 
         # Save validation file
         validation_buffer = io.BytesIO()
         styled_styler.to_excel(validation_buffer, index=False, engine='openpyxl')
-        zip_file.writestr(f"Mandiri_{date_str}_validation.xlsx", validation_buffer.getvalue())
+        zip_file.writestr(f"{bank_type}_{date_str}_validation.xlsx", validation_buffer.getvalue())
 
     return zip_buffer.getvalue()
 

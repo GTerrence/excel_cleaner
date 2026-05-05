@@ -60,7 +60,7 @@ def main() -> None:
 
                     # Create ZIP file
                     date_str = datetime.now().strftime("%Y-%m-%d")
-                    zip_data = create_zip(cleaned_df, styled_styler, date_str)
+                    zip_data = create_zip(cleaned_df, styled_styler, date_str, bank_type)
 
                     st.success("File processed successfully!")
 
