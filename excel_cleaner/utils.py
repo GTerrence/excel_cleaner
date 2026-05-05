@@ -139,7 +139,7 @@ def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -
     return df
 
 
-def get_clean_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
+def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
     match bank_type:
         case BankType.MANDIRI:
             return clean_mandiri(df)

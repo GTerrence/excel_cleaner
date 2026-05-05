@@ -6,7 +6,7 @@ import streamlit as st
 from excel_cleaner.constants import BankType
 from excel_cleaner.utils import (
     create_zip,
-    get_clean_df,
+    get_cleaned_df,
     get_dataframe,
     remove_rows,
     style_rows_red,
@@ -49,7 +49,7 @@ def main() -> None:
                     df = get_dataframe(uploaded_file, bank_type, password)
 
                     # Pre-processing
-                    clean_df = get_clean_df(df, bank_type)
+                    clean_df = get_cleaned_df(df, bank_type)
 
                     # Validation rules masking
                     mask = mark_rows(clean_df, RULES[bank_type])
