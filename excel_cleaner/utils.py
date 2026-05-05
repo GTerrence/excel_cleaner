@@ -5,6 +5,8 @@ from typing import Any
 import msoffcrypto
 import pandas as pd
 
+from .constants import BankType
+
 
 def load_password_excel(uploaded_file: Any, password: str) -> pd.DataFrame:
     # Create a buffer for the decrypted file
@@ -25,6 +27,44 @@ def remove_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
 
 def remove_empty_cols(df: pd.DataFrame) -> pd.DataFrame:
     return df.dropna(axis=1, how='all')
+
+
+def remove_rows(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
+    """
+    Remove rows from the DataFrame where the boolean mask is True.
+    """
+    return df[~mask].copy()
+
+
+def style_rows_red(df: pd.DataFrame, mask: pd.Series) -> 'pd.io.formats.style.Styler':
+    """
+    Style the rows of a DataFrame to red based on a boolean mask.
+    The mask should be True for rows that need to be styled.
+    """
+
+    def highlight_rows(x: pd.DataFrame) -> pd.DataFrame:
+        df_style = pd.DataFrame('', index=x.index, columns=x.columns)
+        df_style.loc[mask, :] = 'background-color: red'
+        return df_style
+
+    return df.style.apply(highlight_rows, axis=None)
+
+
+def create_zip(cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler', date_str: str) -> bytes:
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        # Save cleaned file
+        cleaned_buffer = io.BytesIO()
+        cleaned_df.to_excel(cleaned_buffer, index=False, engine='openpyxl')
+        zip_file.writestr(f"Mandiri_{date_str}_cleaned.xlsx", cleaned_buffer.getvalue())
+
+        # Save validation file
+        validation_buffer = io.BytesIO()
+        styled_styler.to_excel(validation_buffer, index=False, engine='openpyxl')
+        zip_file.writestr(f"Mandiri_{date_str}_validation.xlsx", validation_buffer.getvalue())
+
+    return zip_buffer.getvalue()
 
 
 def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
@@ -65,42 +105,45 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     clean_df['sort_key'] = pd.to_numeric(clean_df['No.'], errors='coerce')
     clean_df = clean_df.sort_values('sort_key').drop(columns=['sort_key']).reset_index(drop=True)
 
+    # NOTE:Drop unneccessary column
+    clean_df.drop(columns=['Saldo'], inplace=True)
+
     return clean_df
 
 
-def remove_rows(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
-    """
-    Remove rows from the DataFrame where the boolean mask is True.
-    """
-    return df[~mask].copy()
+def clean_bca(df: pd.DataFrame) -> pd.DataFrame:
+    clean_df = df.rename(columns={'Unnamed: 4': 'Type'})
+
+    # NOTE: Drop footer
+    clean_df = clean_df.dropna(subset=['Type'])
+
+    # NOTE:Drop unneccessary column
+    clean_df.drop(columns=['Balance', 'Branch'], inplace=True)
+    return clean_df
 
 
-def style_rows_red(df: pd.DataFrame, mask: pd.Series) -> 'pd.io.formats.style.Styler':
-    """
-    Style the rows of a DataFrame to red based on a boolean mask.
-    The mask should be True for rows that need to be styled.
-    """
+def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -> pd.DataFrame:
+    match bank_type:
+        case BankType.BCA:
+            kwargs = {'skiprows': 4}
+        case _:
+            kwargs = {}
 
-    def highlight_rows(x: pd.DataFrame) -> pd.DataFrame:
-        df_style = pd.DataFrame('', index=x.index, columns=x.columns)
-        df_style.loc[mask, :] = 'background-color: red'
-        return df_style
+    if file.type == 'text/csv':
+        df = pd.read_csv(file, **kwargs)
+    elif password:
+        df = load_password_excel(file, password)
+    else:
+        df = pd.read_excel(file, **kwargs)
 
-    return df.style.apply(highlight_rows, axis=None)
+    return df
 
 
-def create_zip(cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler', date_str: str) -> bytes:
-    zip_buffer = io.BytesIO()
-
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        # Save cleaned file
-        cleaned_buffer = io.BytesIO()
-        cleaned_df.to_excel(cleaned_buffer, index=False, engine='openpyxl')
-        zip_file.writestr(f"Mandiri_{date_str}_cleaned.xlsx", cleaned_buffer.getvalue())
-
-        # Save validation file
-        validation_buffer = io.BytesIO()
-        styled_styler.to_excel(validation_buffer, index=False, engine='openpyxl')
-        zip_file.writestr(f"Mandiri_{date_str}_validation.xlsx", validation_buffer.getvalue())
-
-    return zip_buffer.getvalue()
+def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
+    match bank_type:
+        case BankType.MANDIRI:
+            return clean_mandiri(df)
+        case BankType.BCA:
+            return clean_bca(df)
+        case _:
+            raise NotImplementedError(f'Bank type "{bank_type}" is not implemented yet.')

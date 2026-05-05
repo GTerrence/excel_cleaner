@@ -1,11 +1,16 @@
 from datetime import datetime
 
 import msoffcrypto
-import pandas as pd
 import streamlit as st
 
 from excel_cleaner.constants import BankType
-from excel_cleaner.utils import clean_mandiri, create_zip, load_password_excel, remove_rows, style_rows_red
+from excel_cleaner.utils import (
+    create_zip,
+    get_cleaned_df,
+    get_dataframe,
+    remove_rows,
+    style_rows_red,
+)
 from excel_cleaner.validators import ValidationRule, load_rules_config, mark_rows
 
 RULES: dict[BankType, list[ValidationRule]] = load_rules_config()
@@ -17,7 +22,7 @@ def main() -> None:
     st.title("Excel Cleaner")
 
     bank_type = st.selectbox("Bank Type", BankType)
-    uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx", "xls"])
+    uploaded_file = st.file_uploader("Upload Excel or CSV File", type=["xlsx", "xls", "csv"])
 
     if uploaded_file is not None:
         # Check if file is encrypted
@@ -41,15 +46,10 @@ def main() -> None:
         if st.button("Process File"):
             with st.spinner("Processing file..."):
                 try:
-                    if is_encrypted:
-                        df = load_password_excel(uploaded_file, password)
-                    else:
-                        df = pd.read_excel(uploaded_file)
+                    df = get_dataframe(uploaded_file, bank_type, password)
 
                     # Pre-processing
-                    clean_df = clean_mandiri(df)
-                    if 'Saldo' in clean_df.columns:
-                        clean_df.drop(columns=['Saldo'], inplace=True)
+                    clean_df = get_cleaned_df(df, bank_type)
 
                     # Validation rules masking
                     mask = mark_rows(clean_df, RULES[bank_type])

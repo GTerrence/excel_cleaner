@@ -4,7 +4,7 @@ import unittest
 import pandas as pd
 
 from excel_cleaner.utils import remove_rows, style_rows_red
-from excel_cleaner.validators import ColumnContainsRule, ColumnFilledRule, mark_rows
+from excel_cleaner.validators import ColumnContainsRule, ColumnEqualsRule, ColumnFilledRule, mark_rows
 
 
 class TestValidators(unittest.TestCase):
@@ -27,6 +27,14 @@ class TestValidators(unittest.TestCase):
         rule = ColumnContainsRule('C', ['apple', 'date'])
         mask = rule.apply(df_test)
         self.assertEqual(mask.tolist(), [True, False, False, True])
+
+    def test_column_equals_rule(self) -> None:
+        df_test = self.df.copy()
+        df_test['C'] = ['green apple', 'Banana', 'cherry', 'date']
+
+        rule = ColumnEqualsRule('C', ['green apple', 'banana'])
+        mask = rule.apply(df_test)
+        self.assertEqual(mask.tolist(), [True, True, False, False])
 
     def test_mark_rows_combined(self) -> None:
         df_test = self.df.copy()
