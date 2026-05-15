@@ -1,5 +1,6 @@
 import io
 import zipfile
+from datetime import datetime
 from typing import Any
 
 import msoffcrypto
@@ -105,6 +106,23 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     clean_df['sort_key'] = pd.to_numeric(clean_df['No.'], errors='coerce')
     clean_df = clean_df.sort_values('sort_key').drop(columns=['sort_key']).reset_index(drop=True)
 
+    # Reformat
+    def clean_balance_format(value: Any) -> int:
+        if pd.isna(value) or value == "":
+            return 0
+
+        s = str(value)
+        if "," in s:
+            s = s.split(",")[0]
+        s = s.replace(".", "")
+        try:
+            return int(s)
+        except (ValueError, TypeError):
+            return 0
+
+    clean_df['Tanggal'] = clean_df['Tanggal'].apply(reformat_date_string)
+    clean_df['Kredit'] = clean_df['Kredit'].apply(clean_balance_format).apply(convert_to_money_format)
+
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Saldo'], inplace=True)
 
@@ -116,6 +134,9 @@ def clean_bca(df: pd.DataFrame) -> pd.DataFrame:
 
     # NOTE: Drop footer
     clean_df = clean_df.dropna(subset=['Type'])
+
+    # NOTE: Format
+    clean_df['Amount'] = clean_df['Amount'].apply(convert_to_money_format)
 
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Balance', 'Branch'], inplace=True)
@@ -147,3 +168,33 @@ def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
             return clean_bca(df)
         case _:
             raise NotImplementedError(f'Bank type "{bank_type}" is not implemented yet.')
+
+
+def reformat_date_string(
+    date_str: str,
+    input_format: str = "%d %b %Y %H:%M:%S WIB",
+    output_format: str = "%d/%m/%Y"
+) -> str:
+    """
+    Removes the time component of a date string based on input and output formats.
+    Using datetime instead of regex makes it robust to format changes.
+    """
+    dt = datetime.strptime(date_str, input_format)
+    return dt.strftime(output_format)
+
+def convert_to_money_format(value: float | int | str) -> str:
+    """
+    Format a number to Indonesian Rupiah (Rp) money format.
+    Uses '.' as the thousand separator and removes trailing commas/decimals.
+    """
+    if pd.isna(value) or value == '':
+        return '0'
+
+    try:
+        if isinstance(value, str):
+            value = value.replace(',', '')
+
+        num = int(float(value))
+        return f"Rp. {num:,}".replace(",", ".")
+    except (ValueError, TypeError):
+        return str(value)
