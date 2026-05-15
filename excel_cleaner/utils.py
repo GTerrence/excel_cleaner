@@ -108,6 +108,8 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
 
     # Reformat date
     clean_df['Tanggal'] = clean_df['Tanggal'].apply(reformat_date_string)
+    clean_df['Kredit'] = clean_df['Kredit'].apply(convert_to_money_format)
+    clean_df['Debit'] = clean_df['Debit'].apply(convert_to_money_format)
 
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Saldo'], inplace=True)
@@ -164,3 +166,20 @@ def reformat_date_string(
     """
     dt = datetime.strptime(date_str, input_format)
     return dt.strftime(output_format)
+
+def convert_to_money_format(value: float | int | str) -> str:
+    """
+    Format a number to Indonesian Rupiah (Rp) money format.
+    Uses '.' as the thousand separator and removes trailing commas/decimals.
+    """
+    if pd.isna(value) or value == '':
+        return '0'
+
+    try:
+        if isinstance(value, str):
+            value = value.replace(',', '')
+
+        num = int(float(value))
+        return f"{num:,}".replace(",", ".")
+    except (ValueError, TypeError):
+        return str(value)
