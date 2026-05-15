@@ -1,5 +1,6 @@
 import io
 import zipfile
+from datetime import datetime
 from typing import Any
 
 import msoffcrypto
@@ -105,6 +106,9 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     clean_df['sort_key'] = pd.to_numeric(clean_df['No.'], errors='coerce')
     clean_df = clean_df.sort_values('sort_key').drop(columns=['sort_key']).reset_index(drop=True)
 
+    # Reformat date
+    clean_df['Tanggal'] = clean_df['Tanggal'].apply(reformat_date_string)
+
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Saldo'], inplace=True)
 
@@ -147,3 +151,16 @@ def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
             return clean_bca(df)
         case _:
             raise NotImplementedError(f'Bank type "{bank_type}" is not implemented yet.')
+
+
+def reformat_date_string(
+    date_str: str,
+    input_format: str = "%d %b %Y %H:%M:%S WIB",
+    output_format: str = "%d/%m/%Y"
+) -> str:
+    """
+    Removes the time component of a date string based on input and output formats.
+    Using datetime instead of regex makes it robust to format changes.
+    """
+    dt = datetime.strptime(date_str, input_format)
+    return dt.strftime(output_format)
