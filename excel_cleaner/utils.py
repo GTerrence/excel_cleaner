@@ -106,10 +106,22 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     clean_df['sort_key'] = pd.to_numeric(clean_df['No.'], errors='coerce')
     clean_df = clean_df.sort_values('sort_key').drop(columns=['sort_key']).reset_index(drop=True)
 
-    # Reformat date
+    # Reformat
+    def clean_balance_format(value: Any) -> int:
+        if pd.isna(value) or value == "":
+            return 0
+
+        s = str(value)
+        if "," in s:
+            s = s.split(",")[0]
+        s = s.replace(".", "")
+        try:
+            return int(s)
+        except (ValueError, TypeError):
+            return 0
+
     clean_df['Tanggal'] = clean_df['Tanggal'].apply(reformat_date_string)
-    clean_df['Kredit'] = clean_df['Kredit'].apply(convert_to_money_format)
-    clean_df['Debit'] = clean_df['Debit'].apply(convert_to_money_format)
+    clean_df['Kredit'] = clean_df['Kredit'].apply(clean_balance_format).apply(convert_to_money_format)
 
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Saldo'], inplace=True)
@@ -122,6 +134,9 @@ def clean_bca(df: pd.DataFrame) -> pd.DataFrame:
 
     # NOTE: Drop footer
     clean_df = clean_df.dropna(subset=['Type'])
+
+    # NOTE: Format
+    clean_df['Amount'] = clean_df['Amount'].apply(convert_to_money_format)
 
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Balance', 'Branch'], inplace=True)
@@ -180,6 +195,6 @@ def convert_to_money_format(value: float | int | str) -> str:
             value = value.replace(',', '')
 
         num = int(float(value))
-        return f"{num:,}".replace(",", ".")
+        return f"Rp. {num:,}".replace(",", ".")
     except (ValueError, TypeError):
         return str(value)
