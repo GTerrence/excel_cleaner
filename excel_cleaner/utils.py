@@ -125,6 +125,7 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
 
     # NOTE:Drop unneccessary column
     clean_df.drop(columns=['Saldo'], inplace=True)
+    clean_df.drop(columns=['No.'], inplace=True)
 
     return clean_df
 
