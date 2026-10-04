@@ -22,7 +22,7 @@ def main() -> None:
     st.title("Excel Cleaner")
 
     bank_type = st.selectbox("Bank Type", BankType)
-    uploaded_file = st.file_uploader("Upload Excel or CSV File", type=["xlsx", "xls", "csv"])
+    uploaded_file = st.file_uploader("Upload Excel or CSV File", type=["xlsx", "xls", "csv", "pdf"])
 
     if uploaded_file is not None:
         # Check if file is encrypted
