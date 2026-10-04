@@ -10,9 +10,18 @@ import pandas as pd
 from .constants import BankType
 
 INDONESIAN_MONTH_MAP: dict[str, str] = {
-    'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
-    'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
-    'september': '09', 'oktober': '10', 'november': '11', 'desember': '12',
+    'januari': '01',
+    'februari': '02',
+    'maret': '03',
+    'april': '04',
+    'mei': '05',
+    'juni': '06',
+    'juli': '07',
+    'agustus': '08',
+    'september': '09',
+    'oktober': '10',
+    'november': '11',
+    'desember': '12',
 }
 
 _DATE_PATTERN = re.compile(
@@ -66,7 +75,9 @@ def style_rows_red(df: pd.DataFrame, mask: pd.Series) -> 'pd.io.formats.style.St
     return df.style.apply(highlight_rows, axis=None)
 
 
-def create_zip(cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler | None', date_str: str, bank_type: BankType) -> bytes:
+def create_zip(
+    cleaned_df: pd.DataFrame, styled_styler: 'pd.io.formats.style.Styler | None', date_str: str, bank_type: BankType
+) -> bytes:
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -185,8 +196,7 @@ def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
         if not col0 and not col2:
             continue
 
-        if ('Akhir Detail' in col0 or 'Akhir Detail' in col2
-                or '--- End of Transaction' in col2):
+        if 'Akhir Detail' in col0 or 'Akhir Detail' in col2 or '--- End of Transaction' in col2:
             if current:
                 records.append(current)
                 current = None
@@ -218,18 +228,18 @@ def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
         return pd.DataFrame(columns=['Tanggal', 'Description', 'Debit', 'Kredit'])
 
     def smart_join(parts: list[str]) -> str:
-        return ' '.join(
-            p for p in (str(x).strip().replace('\n', ' ') for x in parts) if p
-        )
+        return ' '.join(p for p in (str(x).strip().replace('\n', ' ') for x in parts) if p)
 
     rows = []
     for rec in records:
-        rows.append({
-            'Tanggal': _parse_uob_date(rec['date']),
-            'Description': smart_join(rec['desc_parts']),
-            'Debit': convert_to_money_format(rec['debit']),
-            'Kredit': convert_to_money_format(rec['kredit']),
-        })
+        rows.append(
+            {
+                'Tanggal': _parse_uob_date(rec['date']),
+                'Description': smart_join(rec['desc_parts']),
+                'Debit': convert_to_money_format(rec['debit']),
+                'Kredit': convert_to_money_format(rec['kredit']),
+            }
+        )
 
     df = pd.DataFrame(rows)
     return df
@@ -284,9 +294,7 @@ def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
 
 
 def reformat_date_string(
-    date_str: str,
-    input_format: str = "%d %b %Y %H:%M:%S WIB",
-    output_format: str = "%d/%m/%Y"
+    date_str: str, input_format: str = "%d %b %Y %H:%M:%S WIB", output_format: str = "%d/%m/%Y"
 ) -> str:
     """
     Removes the time component of a date string based on input and output formats.
@@ -294,6 +302,7 @@ def reformat_date_string(
     """
     dt = datetime.strptime(date_str, input_format)
     return dt.strftime(output_format)
+
 
 def convert_to_money_format(value: float | int | str) -> str:
     """
