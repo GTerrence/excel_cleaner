@@ -1,4 +1,5 @@
 import io
+import re
 import zipfile
 from datetime import datetime
 from typing import Any
@@ -7,6 +8,20 @@ import msoffcrypto
 import pandas as pd
 
 from .constants import BankType
+
+INDONESIAN_MONTH_MAP: dict[str, str] = {
+    'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
+    'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
+    'september': '09', 'oktober': '10', 'november': '11', 'desember': '12',
+}
+
+_DATE_PATTERN = re.compile(
+    r'^\d{1,2}\s+('
+    r'januari|februari|maret|april|mei|juni|juli|'
+    r'agustus|september|oktober|november|desember'
+    r')$',
+    re.IGNORECASE,
+)
 
 
 def load_password_excel(uploaded_file: Any, password: str) -> pd.DataFrame:
@@ -144,7 +159,102 @@ def clean_bca(df: pd.DataFrame) -> pd.DataFrame:
     return clean_df
 
 
+def _parse_uob_date(date_str: str) -> str:
+    parts = date_str.strip().split()
+    if len(parts) != 2:
+        return date_str
+    month_num = INDONESIAN_MONTH_MAP.get(parts[1].lower(), parts[1])
+    return f"{parts[0]}/{month_num}"
+
+
+def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
+    def _normalize_row(row: list) -> list:
+        if len(row) == 6:
+            return row[:3] + [''] + row[3:]
+        return (row + [''] * 7)[:7]
+
+    normalized = [_normalize_row(r) for r in raw_rows]
+
+    records: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+
+    for row in normalized:
+        col0 = str(row[0]).strip() if row[0] else ''
+        col2 = str(row[2]).strip() if row[2] else ''
+
+        if not col0 and not col2:
+            continue
+
+        if ('Akhir Detail' in col0 or 'Akhir Detail' in col2
+                or '--- End of Transaction' in col2):
+            if current:
+                records.append(current)
+                current = None
+            continue
+
+        if col2 == 'Total' and not col0:
+            continue
+
+        if col0 and not _DATE_PATTERN.match(col0):
+            continue
+
+        if _DATE_PATTERN.match(col0):
+            if current:
+                records.append(current)
+            current = {
+                'date': col0,
+                'desc_parts': [col2] if col2 else [],
+                'debit': str(row[4]).strip() if len(row) > 4 and row[4] else '',
+                'kredit': str(row[5]).strip() if len(row) > 5 and row[5] else '',
+            }
+        elif not col0 and col2:
+            if current is not None:
+                current['desc_parts'].append(col2)
+
+    if current:
+        records.append(current)
+
+    if not records:
+        return pd.DataFrame(columns=['Tanggal', 'Description', 'Debit', 'Kredit'])
+
+    def smart_join(parts: list[str]) -> str:
+        return ' '.join(
+            p for p in (str(x).strip().replace('\n', ' ') for x in parts) if p
+        )
+
+    rows = []
+    for rec in records:
+        rows.append({
+            'Tanggal': _parse_uob_date(rec['date']),
+            'Description': smart_join(rec['desc_parts']),
+            'Debit': convert_to_money_format(rec['debit']),
+            'Kredit': convert_to_money_format(rec['kredit']),
+        })
+
+    df = pd.DataFrame(rows)
+    return df
+
+
 def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -> pd.DataFrame:
+    if bank_type == BankType.UOB:
+        import pdfplumber
+
+        settings = {
+            "vertical_strategy": "text",
+            "horizontal_strategy": "text",
+        }
+
+        with pdfplumber.open(file) as pdf:
+            total = len(pdf.pages)
+            all_rows: list[list] = []
+            for p in range(1, total - 1):
+                page = pdf.pages[p]
+                tables = page.find_tables(table_settings=settings)
+                for t in tables:
+                    all_rows.extend(t.extract())
+
+        return clean_uob(all_rows)
+
     match bank_type:
         case BankType.BCA:
             kwargs = {'skiprows': 4}
@@ -167,6 +277,8 @@ def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
             return clean_mandiri(df)
         case BankType.BCA:
             return clean_bca(df)
+        case BankType.UOB:
+            return df
         case _:
             raise NotImplementedError(f'Bank type "{bank_type}" is not implemented yet.')
 
