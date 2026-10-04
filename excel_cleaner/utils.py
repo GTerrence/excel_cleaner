@@ -1,11 +1,13 @@
 import io
 import re
 import zipfile
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
 import msoffcrypto
 import pandas as pd
+import pdfplumber
 
 from .constants import BankType
 
@@ -178,6 +180,23 @@ def _parse_uob_date(date_str: str) -> str:
     return f"{parts[0]}/{month_num}"
 
 
+def load_uob(file: Any) -> list[list]:
+    settings = {
+        "vertical_strategy": "text",
+        "horizontal_strategy": "text",
+    }
+
+    with pdfplumber.open(file) as pdf:
+        total = len(pdf.pages)
+        all_rows: list[list] = []
+        for p in range(1, total - 1):
+            page = pdf.pages[p]
+            tables = page.find_tables(table_settings=settings)
+            for t in tables:
+                all_rows.extend(t.extract())
+        return all_rows
+
+
 def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
     def _normalize_row(row: list) -> list:
         if len(row) == 6:
@@ -247,23 +266,7 @@ def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
 
 def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -> pd.DataFrame:
     if bank_type == BankType.UOB:
-        import pdfplumber
-
-        settings = {
-            "vertical_strategy": "text",
-            "horizontal_strategy": "text",
-        }
-
-        with pdfplumber.open(file) as pdf:
-            total = len(pdf.pages)
-            all_rows: list[list] = []
-            for p in range(1, total - 1):
-                page = pdf.pages[p]
-                tables = page.find_tables(table_settings=settings)
-                for t in tables:
-                    all_rows.extend(t.extract())
-
-        return clean_uob(all_rows)
+        return load_uob(file)
 
     match bank_type:
         case BankType.BCA:
@@ -288,7 +291,7 @@ def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
         case BankType.BCA:
             return clean_bca(df)
         case BankType.UOB:
-            return df
+            return clean_uob(df)
         case _:
             raise NotImplementedError(f'Bank type "{bank_type}" is not implemented yet.')
 
