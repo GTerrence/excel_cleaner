@@ -1,7 +1,6 @@
 import io
 import re
 import zipfile
-from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
@@ -172,12 +171,21 @@ def clean_bca(df: pd.DataFrame) -> pd.DataFrame:
     return clean_df
 
 
-def _parse_uob_date(date_str: str) -> str:
+def _parse_uob_date(date_str: str, year: str | None = None) -> str:
     parts = date_str.strip().split()
     if len(parts) != 2:
         return date_str
     month_num = INDONESIAN_MONTH_MAP.get(parts[1].lower(), parts[1])
+    if year:
+        return f"{parts[0]}/{month_num}/{year}"
     return f"{parts[0]}/{month_num}"
+
+
+def _extract_uob_year(file: Any) -> str | None:
+    with pdfplumber.open(file) as pdf:
+        text = pdf.pages[0].extract_text()
+    match = re.search(r'Periode:.*?(\d{4})', text)
+    return match.group(1) if match else None
 
 
 def load_uob(file: Any) -> list[list]:
@@ -197,7 +205,7 @@ def load_uob(file: Any) -> list[list]:
         return all_rows
 
 
-def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
+def clean_uob(raw_rows: list[list], year: str | None = None) -> pd.DataFrame:
     def _normalize_row(row: list) -> list:
         if len(row) == 6:
             return row[:3] + [''] + row[3:]
@@ -253,7 +261,7 @@ def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
     for rec in records:
         rows.append(
             {
-                'Tanggal': _parse_uob_date(rec['date']),
+                'Tanggal': _parse_uob_date(rec['date'], year),
                 'Description': smart_join(rec['desc_parts']),
                 'Debit': convert_to_money_format(rec['debit']),
                 'Kredit': convert_to_money_format(rec['kredit']),
@@ -266,7 +274,7 @@ def clean_uob(raw_rows: list[list]) -> pd.DataFrame:
 
 def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -> pd.DataFrame:
     if bank_type == BankType.UOB:
-        return load_uob(file)
+        return (load_uob(file), _extract_uob_year(file))
 
     match bank_type:
         case BankType.BCA:
@@ -291,7 +299,8 @@ def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
         case BankType.BCA:
             return clean_bca(df)
         case BankType.UOB:
-            return clean_uob(df)
+            rows, year = df
+            return clean_uob(rows, year)
         case _:
             raise NotImplementedError(f'Bank type "{bank_type}" is not implemented yet.')
 
