@@ -196,6 +196,6 @@ def convert_to_money_format(value: float | int | str) -> str:
             value = value.replace(',', '')
 
         num = int(float(value))
-        return f"Rp. {num:,}".replace(",", ".")
+        return f"{num:,}".replace(",", ".")
     except (ValueError, TypeError):
         return str(value)

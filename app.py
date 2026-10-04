@@ -43,7 +43,7 @@ def main() -> None:
                 st.warning("Please enter a password to proceed.")
                 return
 
-        sanitized = st.checkbox("Sanitized", value=True)
+        sanitized = st.checkbox("Remove sensitive information", value=True)
 
         if st.button("Process File"):
             with st.spinner("Processing file..."):
