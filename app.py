@@ -43,6 +43,8 @@ def main() -> None:
                 st.warning("Please enter a password to proceed.")
                 return
 
+        sanitized = st.checkbox("Remove sensitive information", value=True)
+
         if st.button("Process File"):
             with st.spinner("Processing file..."):
                 try:
@@ -51,12 +53,17 @@ def main() -> None:
                     # Pre-processing
                     clean_df = get_cleaned_df(df, bank_type)
 
-                    # Validation rules masking
-                    mask = mark_rows(clean_df, RULES[bank_type])
+                    if sanitized:
+                        # Validation rules masking
+                        mask = mark_rows(clean_df, RULES[bank_type])
 
-                    # Apply styles and row removal
-                    cleaned_df = remove_rows(clean_df, mask)
-                    styled_styler = style_rows_red(clean_df, mask)
+                        # Apply styles and row removal
+                        cleaned_df = remove_rows(clean_df, mask)
+                        styled_styler = style_rows_red(clean_df, mask)
+                    else:
+                        mask = None
+                        cleaned_df = clean_df
+                        styled_styler = None
 
                     # Create ZIP file
                     date_str = datetime.now().strftime("%Y-%m-%d")
