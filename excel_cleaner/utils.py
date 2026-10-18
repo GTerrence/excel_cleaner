@@ -397,15 +397,16 @@ def get_summary(df: Any, bank_type: BankType) -> 'StatementSummary | None':
     For UOB, ``df`` is the ``(rows, year)`` tuple returned by ``get_dataframe``.
     Returns ``None`` when no summary values could be found.
     """
-    if bank_type == BankType.BCA:
-        values = _extract_bca_summary(df)
-    elif bank_type == BankType.MANDIRI:
-        values = _extract_mandiri_summary(df)
-    elif bank_type == BankType.UOB:
-        rows, _year = df
-        values = _extract_uob_summary(rows)
-    else:
-        return None
+    match bank_type:
+        case BankType.BCA:
+            values = _extract_bca_summary(df)
+        case BankType.MANDIRI:
+            values = _extract_mandiri_summary(df)
+        case BankType.UOB:
+            rows, _year = df
+            values = _extract_uob_summary(rows)
+        case _:
+            return None
 
     if not values:
         return None
