@@ -82,20 +82,26 @@ class TestUtils(unittest.TestCase):
 
 
 class TestSummary(unittest.TestCase):
+    """Tests for balance-summary extraction and appending.
+
+    NOTE: All statement values below are synthetic placeholders invented for these
+    tests. They are not real account data from any sample statement.
+    """
+
     def test_append_summary(self) -> None:
         df = pd.DataFrame(
             {
-                'Date': ['01/02/2026', '02/02/2026'],
+                'Date': ['01/01/2026', '02/01/2026'],
                 'Description': ['foo', 'bar'],
                 'Amount': ['100', '200'],
                 'Type': ['CR', 'DB'],
             }
         )
         summary = StatementSummary(
-            starting_balance='7.998.519',
-            total_credit='88.612.240',
-            total_debit='85.467.039',
-            ending_balance='11.143.720',
+            starting_balance='10.000',
+            total_credit='20.000',
+            total_debit='30.000',
+            ending_balance='40.000',
         )
 
         result = append_summary(df, summary)
@@ -106,16 +112,16 @@ class TestSummary(unittest.TestCase):
 
         expected = ['Starting Balance', 'Total Credit', 'Total Debit', 'Ending Balance']
         self.assertEqual(result['Date'].iloc[2:].tolist(), expected)
-        self.assertEqual(result['Type'].iloc[2:].tolist(), ['7.998.519', '88.612.240', '85.467.039', '11.143.720'])
+        self.assertEqual(result['Type'].iloc[2:].tolist(), ['10.000', '20.000', '30.000', '40.000'])
         # Middle columns are left empty.
         self.assertEqual(result['Description'].iloc[2:].tolist(), ['', '', '', ''])
 
     def test_get_summary_bca(self) -> None:
         df = pd.DataFrame(
             {
-                'Date': ['01/02/2026', 'Starting Balance', 'Credit', 'Debet', 'Ending Balance'],
+                'Date': ['01/01/2026', 'Starting Balance', 'Credit', 'Debet', 'Ending Balance'],
                 'Description': ['trx', '=', '=', '=', '='],
-                'Branch': ['0000', '7998519.52', '88612240.37', '85467039.67', '11143720.22'],
+                'Branch': ['0000', '1111111.11', '2222222.22', '3333333.33', '4444444.44'],
                 'Amount': ['100', None, None, None, None],
                 'Unnamed: 4': ['CR', None, None, None, None],
             }
@@ -125,18 +131,18 @@ class TestSummary(unittest.TestCase):
 
         self.assertIsNotNone(summary)
         assert summary is not None
-        self.assertEqual(summary.starting_balance, '7.998.519')
-        self.assertEqual(summary.total_credit, '88.612.240')
-        self.assertEqual(summary.total_debit, '85.467.039')
-        self.assertEqual(summary.ending_balance, '11.143.720')
+        self.assertEqual(summary.starting_balance, '1.111.111')
+        self.assertEqual(summary.total_credit, '2.222.222')
+        self.assertEqual(summary.total_debit, '3.333.333')
+        self.assertEqual(summary.ending_balance, '4.444.444')
 
     def test_get_summary_mandiri(self) -> None:
         df = pd.DataFrame(
             [
-                {'label': 'Saldo Awal/Initial Balance', 'value': '1.370.753,91'},
-                {'label': 'Dana Masuk/Incoming Transactions', 'value': '81.971.635,00'},
-                {'label': 'Dana Keluar/Outgoing Transactions', 'value': '82.160.428,00'},
-                {'label': 'Saldo Akhir/Closing Balance', 'value': '1.181.960,91'},
+                {'label': 'Saldo Awal/Initial Balance', 'value': '1.111.111,11'},
+                {'label': 'Dana Masuk/Incoming Transactions', 'value': '2.222.222,22'},
+                {'label': 'Dana Keluar/Outgoing Transactions', 'value': '3.333.333,33'},
+                {'label': 'Saldo Akhir/Closing Balance', 'value': '4.444.444,44'},
             ]
         )
 
@@ -144,27 +150,27 @@ class TestSummary(unittest.TestCase):
 
         self.assertIsNotNone(summary)
         assert summary is not None
-        self.assertEqual(summary.starting_balance, '1.370.753')
-        self.assertEqual(summary.total_credit, '81.971.635')
-        self.assertEqual(summary.total_debit, '82.160.428')
-        self.assertEqual(summary.ending_balance, '1.181.960')
+        self.assertEqual(summary.starting_balance, '1.111.111')
+        self.assertEqual(summary.total_credit, '2.222.222')
+        self.assertEqual(summary.total_debit, '3.333.333')
+        self.assertEqual(summary.ending_balance, '4.444.444')
 
     def test_get_summary_uob(self) -> None:
         rows = [
-            ['01 Agustus', '01 Agustus', 'BALANCE B/F', '', '', '', '589'],
-            ['02 Agustus', '02 Agustus', 'BI FAST CREDIT', '', '', '19,200,000', '19,200,589'],
-            ['31 Agustus', '31 Agustus', 'Pajak', '156', '', '6,062'],
-            ['', '', 'Total', '291,410,311', '291,415,784', '6,062'],
+            ['01 Januari', '01 Januari', 'BALANCE B/F', '', '', '', '111'],
+            ['02 Januari', '02 Januari', 'SOME CREDIT', '', '', '2,000,000', '2,000,111'],
+            ['31 Januari', '31 Januari', 'SOME DEBIT', '333', '', '444'],
+            ['', '', 'Total', '3,333,333', '2,222,222', '444'],
         ]
 
         summary = get_summary((rows, '2026'), BankType.UOB)
 
         self.assertIsNotNone(summary)
         assert summary is not None
-        self.assertEqual(summary.starting_balance, '589')
-        self.assertEqual(summary.total_credit, '291.415.784')
-        self.assertEqual(summary.total_debit, '291.410.311')
-        self.assertEqual(summary.ending_balance, '6.062')
+        self.assertEqual(summary.starting_balance, '111')
+        self.assertEqual(summary.total_credit, '2.222.222')
+        self.assertEqual(summary.total_debit, '3.333.333')
+        self.assertEqual(summary.ending_balance, '444')
 
 
 if __name__ == '__main__':

@@ -302,7 +302,20 @@ _BCA_SUMMARY_LABELS: dict[str, str] = {
 }
 
 
-def _extract_bca_summary(df: pd.DataFrame) -> dict[str, str]:
+def _build_summary(values: dict[str, str]) -> 'StatementSummary | None':
+    """Build a StatementSummary from extracted values, or None when nothing was found."""
+    if not values:
+        return None
+
+    return StatementSummary(
+        starting_balance=values.get('starting_balance', ''),
+        total_credit=values.get('total_credit', ''),
+        total_debit=values.get('total_debit', ''),
+        ending_balance=values.get('ending_balance', ''),
+    )
+
+
+def _extract_bca_summary(df: pd.DataFrame) -> 'StatementSummary | None':
     label_col = df.columns[0]
     value_col = df.columns[2]  # Summary values live in the 3rd column ("Branch").
     values: dict[str, str] = {}
@@ -310,7 +323,7 @@ def _extract_bca_summary(df: pd.DataFrame) -> dict[str, str]:
         key = _BCA_SUMMARY_LABELS.get(str(row[label_col]).strip().lower())
         if key and key not in values:
             values[key] = convert_to_money_format(row[value_col])
-    return values
+    return _build_summary(values)
 
 
 _MANDIRI_SUMMARY_LABELS: dict[str, str] = {
@@ -321,7 +334,7 @@ _MANDIRI_SUMMARY_LABELS: dict[str, str] = {
 }
 
 
-def _extract_mandiri_summary(df: pd.DataFrame) -> dict[str, str]:
+def _extract_mandiri_summary(df: pd.DataFrame) -> 'StatementSummary | None':
     values: dict[str, str] = {}
     for _, row in df.iterrows():
         non_null = [cell for cell in row if pd.notna(cell)]
@@ -330,13 +343,13 @@ def _extract_mandiri_summary(df: pd.DataFrame) -> dict[str, str]:
             if needle in joined and key not in values:
                 # The value is the last non-null cell on the same row.
                 values[key] = convert_to_money_format(clean_balance_format(non_null[-1]))
-    return values
+    return _build_summary(values)
 
 
-def _extract_uob_summary(rows: list[list]) -> dict[str, str]:
+def _extract_uob_summary(rows: list[list]) -> 'StatementSummary | None':
     first_balance: Any = None
     last_balance: Any = None
-    totals: dict[str, Any] = {}
+    values: dict[str, str] = {}
     for row in (_normalize_uob_row(r) for r in rows):
         col0 = str(row[0]).strip() if row[0] else ''
         col2 = str(row[2]).strip() if row[2] else ''
@@ -345,15 +358,15 @@ def _extract_uob_summary(rows: list[list]) -> dict[str, str]:
                 first_balance = row[6]
             last_balance = row[6]
         elif not col0 and col2.lower() == 'total':
-            totals['total_debit'] = row[4]
-            totals['total_credit'] = row[5]
+            values['total_debit'] = convert_to_money_format(row[4])
+            values['total_credit'] = convert_to_money_format(row[5])
 
-    return {
-        'starting_balance': convert_to_money_format(first_balance),
-        'total_credit': convert_to_money_format(totals.get('total_credit', '')),
-        'total_debit': convert_to_money_format(totals.get('total_debit', '')),
-        'ending_balance': convert_to_money_format(last_balance),
-    }
+    if first_balance is not None:
+        values['starting_balance'] = convert_to_money_format(first_balance)
+    if last_balance is not None:
+        values['ending_balance'] = convert_to_money_format(last_balance)
+
+    return _build_summary(values)
 
 
 def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -> pd.DataFrame:
@@ -399,24 +412,14 @@ def get_summary(df: Any, bank_type: BankType) -> 'StatementSummary | None':
     """
     match bank_type:
         case BankType.BCA:
-            values = _extract_bca_summary(df)
+            return _extract_bca_summary(df)
         case BankType.MANDIRI:
-            values = _extract_mandiri_summary(df)
+            return _extract_mandiri_summary(df)
         case BankType.UOB:
             rows, _year = df
-            values = _extract_uob_summary(rows)
+            return _extract_uob_summary(rows)
         case _:
             return None
-
-    if not values:
-        return None
-
-    return StatementSummary(
-        starting_balance=values.get('starting_balance', ''),
-        total_credit=values.get('total_credit', ''),
-        total_debit=values.get('total_debit', ''),
-        ending_balance=values.get('ending_balance', ''),
-    )
 
 
 def append_summary(cleaned_df: pd.DataFrame, summary: StatementSummary) -> pd.DataFrame:
