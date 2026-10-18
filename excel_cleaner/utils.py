@@ -1,6 +1,7 @@
 import io
 import re
 import zipfile
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -95,6 +96,38 @@ def create_zip(
     return zip_buffer.getvalue()
 
 
+@dataclass
+class StatementSummary:
+    """Account-level balances extracted from a bank statement."""
+
+    starting_balance: str
+    total_credit: str
+    total_debit: str
+    ending_balance: str
+
+
+SUMMARY_ROW_LABELS: list[tuple[str, str]] = [
+    ('Starting Balance', 'starting_balance'),
+    ('Total Credit', 'total_credit'),
+    ('Total Debit', 'total_debit'),
+    ('Ending Balance', 'ending_balance'),
+]
+
+
+def clean_balance_format(value: Any) -> int:
+    if pd.isna(value) or value == "":
+        return 0
+
+    s = str(value)
+    if "," in s:
+        s = s.split(",")[0]
+    s = s.replace(".", "")
+    try:
+        return int(s)
+    except (ValueError, TypeError):
+        return 0
+
+
 def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     # NOTE: Find index for row with value "No"
     header_idx = df[df.iloc[:, 1] == 'No'].index[0]
@@ -134,19 +167,6 @@ def clean_mandiri(df: pd.DataFrame) -> pd.DataFrame:
     clean_df = clean_df.sort_values('sort_key').drop(columns=['sort_key']).reset_index(drop=True)
 
     # Reformat
-    def clean_balance_format(value: Any) -> int:
-        if pd.isna(value) or value == "":
-            return 0
-
-        s = str(value)
-        if "," in s:
-            s = s.split(",")[0]
-        s = s.replace(".", "")
-        try:
-            return int(s)
-        except (ValueError, TypeError):
-            return 0
-
     clean_df['Tanggal'] = clean_df['Tanggal'].apply(reformat_date_string)
     clean_df['Kredit'] = clean_df['Kredit'].apply(clean_balance_format).apply(convert_to_money_format)
 
@@ -205,13 +225,14 @@ def load_uob(file: Any) -> list[list]:
         return all_rows
 
 
-def clean_uob(raw_rows: list[list], year: str | None = None) -> pd.DataFrame:
-    def _normalize_row(row: list) -> list:
-        if len(row) == 6:
-            return row[:3] + [''] + row[3:]
-        return (row + [''] * 7)[:7]
+def _normalize_uob_row(row: list) -> list:
+    if len(row) == 6:
+        return row[:3] + [''] + row[3:]
+    return (row + [''] * 7)[:7]
 
-    normalized = [_normalize_row(r) for r in raw_rows]
+
+def clean_uob(raw_rows: list[list], year: str | None = None) -> pd.DataFrame:
+    normalized = [_normalize_uob_row(r) for r in raw_rows]
 
     records: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
@@ -272,6 +293,82 @@ def clean_uob(raw_rows: list[list], year: str | None = None) -> pd.DataFrame:
     return df
 
 
+_BCA_SUMMARY_LABELS: dict[str, str] = {
+    'starting balance': 'starting_balance',
+    'credit': 'total_credit',
+    'debet': 'total_debit',
+    'debit': 'total_debit',
+    'ending balance': 'ending_balance',
+}
+
+
+def _build_summary(values: dict[str, str]) -> 'StatementSummary | None':
+    """Build a StatementSummary from extracted values, or None when nothing was found."""
+    if not values:
+        return None
+
+    return StatementSummary(
+        starting_balance=values.get('starting_balance', ''),
+        total_credit=values.get('total_credit', ''),
+        total_debit=values.get('total_debit', ''),
+        ending_balance=values.get('ending_balance', ''),
+    )
+
+
+def _extract_bca_summary(df: pd.DataFrame) -> 'StatementSummary | None':
+    label_col = df.columns[0]
+    value_col = df.columns[2]  # Summary values live in the 3rd column ("Branch").
+    values: dict[str, str] = {}
+    for _, row in df.iterrows():
+        key = _BCA_SUMMARY_LABELS.get(str(row[label_col]).strip().lower())
+        if key and key not in values:
+            values[key] = convert_to_money_format(row[value_col])
+    return _build_summary(values)
+
+
+_MANDIRI_SUMMARY_LABELS: dict[str, str] = {
+    'initial balance': 'starting_balance',
+    'incoming transaction': 'total_credit',
+    'outgoing transaction': 'total_debit',
+    'closing balance': 'ending_balance',
+}
+
+
+def _extract_mandiri_summary(df: pd.DataFrame) -> 'StatementSummary | None':
+    values: dict[str, str] = {}
+    for _, row in df.iterrows():
+        non_null = [cell for cell in row if pd.notna(cell)]
+        joined = ' || '.join(str(cell) for cell in non_null).lower()
+        for needle, key in _MANDIRI_SUMMARY_LABELS.items():
+            if needle in joined and key not in values:
+                # The value is the last non-null cell on the same row.
+                values[key] = convert_to_money_format(clean_balance_format(non_null[-1]))
+    return _build_summary(values)
+
+
+def _extract_uob_summary(rows: list[list]) -> 'StatementSummary | None':
+    first_balance: Any = None
+    last_balance: Any = None
+    values: dict[str, str] = {}
+    for row in (_normalize_uob_row(r) for r in rows):
+        col0 = str(row[0]).strip() if row[0] else ''
+        col2 = str(row[2]).strip() if row[2] else ''
+        if _DATE_PATTERN.match(col0):
+            if first_balance is None:
+                first_balance = row[6]
+            last_balance = row[6]
+        elif not col0 and col2.lower() == 'total':
+            values['total_debit'] = convert_to_money_format(row[4])
+            values['total_credit'] = convert_to_money_format(row[5])
+
+    if first_balance is not None:
+        values['starting_balance'] = convert_to_money_format(first_balance)
+    if last_balance is not None:
+        values['ending_balance'] = convert_to_money_format(last_balance)
+
+    return _build_summary(values)
+
+
 def get_dataframe(file: Any, bank_type: BankType, password: str | None = None) -> pd.DataFrame:
     if bank_type == BankType.UOB:
         return (load_uob(file), _extract_uob_year(file))
@@ -303,6 +400,46 @@ def get_cleaned_df(df: pd.DataFrame, bank_type: BankType) -> pd.DataFrame:
             return clean_uob(rows, year)
         case _:
             raise NotImplementedError(f'Bank type "{bank_type}" is not implemented yet.')
+
+
+def get_summary(df: Any, bank_type: BankType) -> 'StatementSummary | None':
+    """
+    Extract the account-level balance summary from a raw statement.
+
+    For BCA and MANDIRI, ``df`` is the raw DataFrame from ``get_dataframe``.
+    For UOB, ``df`` is the ``(rows, year)`` tuple returned by ``get_dataframe``.
+    Returns ``None`` when no summary values could be found.
+    """
+    match bank_type:
+        case BankType.BCA:
+            return _extract_bca_summary(df)
+        case BankType.MANDIRI:
+            return _extract_mandiri_summary(df)
+        case BankType.UOB:
+            rows, _year = df
+            return _extract_uob_summary(rows)
+        case _:
+            return None
+
+
+def append_summary(cleaned_df: pd.DataFrame, summary: StatementSummary) -> pd.DataFrame:
+    """
+    Append the balance summary as rows at the bottom of the cleaned DataFrame.
+
+    Each label is written to the first column and its value to the last column;
+    all other cells are left empty.
+    """
+    label_col = cleaned_df.columns[0]
+    value_col = cleaned_df.columns[-1]
+    rows: list[dict[Any, str]] = []
+    for label, field in SUMMARY_ROW_LABELS:
+        row: dict[Any, str] = dict.fromkeys(cleaned_df.columns, '')
+        row[label_col] = label
+        row[value_col] = getattr(summary, field)
+        rows.append(row)
+
+    summary_df = pd.DataFrame(rows, columns=cleaned_df.columns)
+    return pd.concat([cleaned_df, summary_df], ignore_index=True)
 
 
 def reformat_date_string(

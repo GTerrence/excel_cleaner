@@ -5,9 +5,11 @@ import streamlit as st
 
 from excel_cleaner.constants import BankType
 from excel_cleaner.utils import (
+    append_summary,
     create_zip,
     get_cleaned_df,
     get_dataframe,
+    get_summary,
     remove_rows,
     style_rows_red,
 )
@@ -62,7 +64,8 @@ def main() -> None:
                         styled_styler = style_rows_red(clean_df, mask)
                     else:
                         mask = None
-                        cleaned_df = clean_df
+                        summary = get_summary(df, bank_type)
+                        cleaned_df = append_summary(clean_df, summary) if summary else clean_df
                         styled_styler = None
 
                     # Create ZIP file
